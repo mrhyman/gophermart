@@ -5,11 +5,11 @@ import (
 )
 
 type HTTPHandler struct {
-	svc service.OrderService
+	svc service.Service
 }
 
 func New(
-	svc service.OrderService,
+	svc service.Service,
 
 ) *HTTPHandler {
 	return &HTTPHandler{

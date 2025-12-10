@@ -1,4 +1,4 @@
-package storage
+package repository
 
 import (
 	"context"
@@ -14,11 +14,11 @@ import (
 	"github.com/mrhyman/gophermart/internal/model"
 )
 
-type DBStorage struct {
+type Repository struct {
 	db *sqlx.DB
 }
 
-func NewDBStorage(dsn string) (*DBStorage, error) {
+func NewRepository(dsn string) (*Repository, error) {
 	db, err := sqlx.Open("postgres", dsn)
 	if err != nil {
 		return nil, err
@@ -31,18 +31,18 @@ func NewDBStorage(dsn string) (*DBStorage, error) {
 		return nil, err
 	}
 
-	return &DBStorage{db}, nil
+	return &Repository{db}, nil
 }
 
-func (ds *DBStorage) Ping() error {
+func (ds *Repository) Ping() error {
 	return ds.db.Ping()
 }
 
-func (ds *DBStorage) Close() error {
+func (ds *Repository) Close() error {
 	return ds.db.Close()
 }
 
-func (ds *DBStorage) MigrateUp(migrationsDir, dsn string) error {
+func (ds *Repository) MigrateUp(migrationsDir, dsn string) error {
 	driver, err := postgres.WithInstance(ds.db.DB, &postgres.Config{})
 	if err != nil {
 		return fmt.Errorf("failed to create migrate driver: %w", err)
@@ -63,7 +63,7 @@ func (ds *DBStorage) MigrateUp(migrationsDir, dsn string) error {
 	return nil
 }
 
-func (ds *DBStorage) convertPgError(ctx context.Context, l model.Order, err error) error {
+func (ds *Repository) convertPgError(ctx context.Context, l model.Order, err error) error {
 	var pgErr *pq.Error
 	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
 		if pgErr.Constraint == "idx_links_original_url" {
