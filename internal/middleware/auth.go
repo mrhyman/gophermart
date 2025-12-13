@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/mrhyman/gophermart/internal/auth"
 	"github.com/mrhyman/gophermart/internal/logger"
 	"github.com/mrhyman/gophermart/internal/model"
@@ -12,67 +11,32 @@ import (
 
 func WithAuth(secret string) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
-		return func(res http.ResponseWriter, req *http.Request) {
-			log := logger.FromContext(req.Context())
+		return func(w http.ResponseWriter, r *http.Request) {
+			log := logger.FromContext(r.Context())
 
 			ce, err := auth.NewCookieEncoder(secret)
 			if err != nil {
 				log.With("err", err.Error()).Warn()
-				http.Error(res, model.ErrWentWrong.Error(), http.StatusInternalServerError)
+				http.Error(w, model.ErrWentWrong.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			c, err := req.Cookie("X-USER-ID")
-
-			if err == http.ErrNoCookie {
-				userID := uuid.New().String()
-				v, err := ce.EncodeUserID(userID)
-				if err != nil {
-					http.Error(res, model.ErrWentWrong.Error(), http.StatusInternalServerError)
-					return
-				}
-
-				http.SetCookie(res, &http.Cookie{
-					Name:     "X-USER-ID",
-					Value:    v,
-					Path:     "/",
-					HttpOnly: true,
-				})
-
-				ctx := context.WithValue(req.Context(), model.UserIDKey, userID)
-				next.ServeHTTP(res, req.WithContext(ctx))
-				return
-			}
-
-			userID, err := ce.DecodeUserID(c)
+			cookie, err := r.Cookie("X-Auth-Token")
 			if err != nil {
-				userID = uuid.New().String()
-				val, err := ce.EncodeUserID(userID)
-				if err != nil {
-					http.Error(res, model.ErrWentWrong.Error(), http.StatusInternalServerError)
-					return
-				}
-
-				http.SetCookie(res, &http.Cookie{
-					Name:     "X-USER-ID",
-					Value:    val,
-					Path:     "/",
-					HttpOnly: true,
-				})
-
-				ctx := context.WithValue(req.Context(), model.UserIDKey, userID)
-				next.ServeHTTP(res, req.WithContext(ctx))
+				log.With("err", err.Error()).Warn()
+				http.Error(w, model.ErrWentWrong.Error(), http.StatusUnauthorized)
 				return
 			}
 
-			if userID == "" {
-				log.With("err", model.ErrUnknownUser.Error()).Warn()
-				res.WriteHeader(http.StatusUnauthorized)
+			userID, err := ce.DecodeUserID(cookie)
+			if err != nil || userID == "" {
+				log.With("err", err.Error()).Warn()
+				http.Error(w, model.ErrUnknownUser.Error(), http.StatusUnauthorized)
 				return
 			}
 
-			ctx := context.WithValue(req.Context(), model.UserIDKey, userID)
-			next.ServeHTTP(res, req.WithContext(ctx))
+			ctx := context.WithValue(r.Context(), model.UserIDKey, userID)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 	}
 }

@@ -64,5 +64,41 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
-	// логика логина
+	var req api.LoginRequest
+
+	log := logger.FromContext(r.Context())
+
+	if r.Method != http.MethodPost {
+		log.With("err", model.ErrInvalidRequestParams.Error()).Warn()
+		http.Error(w, model.ErrInvalidRequestParams.Error(), http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.With("err", model.ErrInvalidRequestParams.Error()).Warn()
+		http.Error(w, model.ErrInvalidRequestParams.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.Login == "" || req.Password == "" {
+		log.With("err", model.ErrInvalidRequestParams.Error()).Warn()
+		http.Error(w, model.ErrInvalidRequestParams.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err := h.us.Login(r.Context(), req.Login, req.Password)
+	if err != nil {
+		switch {
+		case errors.Is(err, model.ErrInvalidCredentials):
+			log.With("err", err.Error()).Warn()
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+
+		default:
+			log.With("err", err.Error()).Error()
+			http.Error(w, model.ErrWentWrong.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

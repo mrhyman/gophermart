@@ -33,20 +33,32 @@ func (s *Server) Start(ctx context.Context) {
 
 func SetupMux(h *handler.HTTPHandler, cfg config.AppConfig) http.Handler {
 	r := chi.NewRouter()
-	dmw := DefaultMiddleware(cfg)
+	publicMW := PublicMiddleware()
+	authMW := AuthMiddleware(cfg)
 
-	r.Post("/api/user/register", dmw(h.User.Register))
-	r.Post("/api/user/login", dmw(nil))
-	r.Post("/api/user/orders", dmw(nil))
-	r.Get("/api/user/orders", dmw(nil))
-	r.Get("/api/user/balance", dmw(nil))
-	r.Post("/api/user/balance/withdraw", dmw(nil))
-	r.Get("/api/user/withdrawals", middleware.WithLogging(nil))
+	// Публичные роуты (без авторизации)
+	r.Post("/api/user/register", publicMW(h.User.Register))
+	r.Post("/api/user/login", publicMW(h.User.Login))
+
+	// Защищенные роуты (с авторизацией)
+	r.Post("/api/user/orders", authMW(nil))
+	r.Get("/api/user/orders", authMW(nil))
+	r.Get("/api/user/balance", authMW(nil))
+	r.Post("/api/user/balance/withdraw", authMW(nil))
+	r.Get("/api/user/withdrawals", authMW(nil))
 
 	return r
 }
 
-func DefaultMiddleware(cfg config.AppConfig) func(http.HandlerFunc) http.HandlerFunc {
+func PublicMiddleware() func(http.HandlerFunc) http.HandlerFunc {
+	return func(h http.HandlerFunc) http.HandlerFunc {
+		return middleware.WithGzip(
+			middleware.WithLogging(h),
+		)
+	}
+}
+
+func AuthMiddleware(cfg config.AppConfig) func(http.HandlerFunc) http.HandlerFunc {
 	return func(h http.HandlerFunc) http.HandlerFunc {
 		return middleware.WithAuth(cfg.HashKey)(
 			middleware.WithGzip(

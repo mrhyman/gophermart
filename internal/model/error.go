@@ -12,6 +12,7 @@ var (
 	ErrCompressReading      = errors.New("compress reading error")
 	ErrUnknownUser          = errors.New("userID is not provided")
 	ErrInvalidRequestParams = errors.New("invalid request params")
+	ErrInvalidCredentials   = errors.New("invalid credentials")
 	ErrWentWrong            = errors.New("something went wrong")
 )
 

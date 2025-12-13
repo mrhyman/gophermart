@@ -23,6 +23,12 @@ func (r *Repository) CreateUser(ctx context.Context, login string, password stri
 }
 
 func (r *Repository) GetUserByLogin(ctx context.Context, login string) (*model.User, error) {
-	// логика получения пользователя
-	return nil, nil
+	query := `SELECT id, login, password FROM users WHERE login = $1`
+
+	var user model.User
+	if err := r.db.GetContext(ctx, &user, query, login); err != nil {
+		return nil, r.convertPgError(ctx, "user", login, err)
+	}
+
+	return &user, nil
 }
