@@ -20,7 +20,7 @@ func main() {
 
 	cfg := config.Load(ctx)
 
-	repo := initStorage(ctx, cfg)
+	repo := initRepo(ctx, cfg)
 	defer repo.Close()
 
 	svc := service.New(repo)
@@ -30,20 +30,20 @@ func main() {
 	s.Start(ctx)
 }
 
-func initStorage(ctx context.Context, cfg config.AppConfig) repository.Repository {
+func initRepo(ctx context.Context, cfg config.AppConfig) *repository.Repository {
 	log := logger.FromContext(ctx)
 
-	repo, err := repository.NewRepository(cfg.StoragePath)
+	repo, err := repository.NewRepository(cfg.DBURI)
 
 	if err != nil {
 		log.With("err", err.Error()).Fatal()
 	}
 
-	err = repo.MigrateUp("migrations", cfg.DBDSN)
+	err = repo.MigrateUp("migrations", cfg.DBURI)
 	if err != nil {
 		log.With("err", err.Error()).Fatal()
 	}
 	log.Info("DB connection set. Migrations applied successfully")
 
-	return *repo
+	return repo
 }

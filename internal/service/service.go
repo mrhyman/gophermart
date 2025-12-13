@@ -3,14 +3,19 @@ package service
 import "github.com/mrhyman/gophermart/internal/repository"
 
 type Service struct {
-	repo repository.Repository
+	User *UserService
+	// Order   *OrderService
+	// Balance *BalanceService
 }
 
-func New(
-	repo repository.Repository,
+// type Service struct {
+// 	repo repository.Repository
+// }
 
-) *Service {
+func New(repo *repository.Repository) *Service {
 	return &Service{
-		repo: repo,
+		User: NewUserService(*repo),
+		// Order:   NewOrderService(repo),
+		// Balance: NewBalanceService(repo),
 	}
 }

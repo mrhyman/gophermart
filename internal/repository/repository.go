@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgerrcode"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -63,17 +64,10 @@ func (ds *Repository) MigrateUp(migrationsDir, dsn string) error {
 	return nil
 }
 
-func (ds *Repository) convertPgError(ctx context.Context, l model.Order, err error) error {
+func (ds *Repository) convertPgError(ctx context.Context, entity, id string, err error) error {
 	var pgErr *pq.Error
 	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-		if pgErr.Constraint == "idx_links_original_url" {
-			// existing, getErr := ds.GetByOriginalURL(ctx, l.OriginalURL)
-			// if getErr == nil {
-			// 	return model.NewAlreadyExistsError(existing.ShortURL, err)
-			// }
-			return nil
-		}
+		return model.NewAlreadyExistsError(entity, id, err)
 	}
-
 	return err
 }

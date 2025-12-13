@@ -8,6 +8,8 @@ require (
 	go.uber.org/zap v1.27.1
 )
 
+require golang.org/x/crypto v0.46.0 // indirect
+
 require (
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0

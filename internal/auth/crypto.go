@@ -6,6 +6,8 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"errors"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Crypto struct {
@@ -46,4 +48,14 @@ func (c *Crypto) Decrypt(ciphertext []byte) ([]byte, error) {
 	body := ciphertext[ns:]
 
 	return c.aesgcm.Open(nil, nonce, body, nil)
+}
+
+func HashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(hash), err
+}
+
+func CheckPassword(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
 }

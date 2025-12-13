@@ -6,30 +6,33 @@ import (
 )
 
 var (
-	ErrLoggerSetup     = errors.New("logger setup error")
-	ErrCookieDecoding  = errors.New("can't decode cookie")
-	ErrCookieEncoding  = errors.New("can't encode cookie")
-	ErrCompressReading = errors.New("compress reading error")
-	ErrUnknownUser     = errors.New("userID is not provided")
-	ErrWentWrong       = errors.New("something went wrong")
+	ErrLoggerSetup          = errors.New("logger setup error")
+	ErrCookieDecoding       = errors.New("can't decode cookie")
+	ErrCookieEncoding       = errors.New("can't encode cookie")
+	ErrCompressReading      = errors.New("compress reading error")
+	ErrUnknownUser          = errors.New("userID is not provided")
+	ErrInvalidRequestParams = errors.New("invalid request params")
+	ErrWentWrong            = errors.New("something went wrong")
 )
 
 type AlreadyExistsError struct {
-	OrderID string
-	Err     error
+	Entity string
+	ID     string
+	Err    error
 }
 
 func (e *AlreadyExistsError) Error() string {
-	return fmt.Sprintf("order with such id already exists: %s", e.OrderID)
+	return fmt.Sprintf("%s with id '%s' already exists", e.Entity, e.ID)
 }
 
 func (e *AlreadyExistsError) Unwrap() error {
 	return e.Err
 }
 
-func NewAlreadyExistsError(orderID string, err error) error {
+func NewAlreadyExistsError(entity, id string, err error) error {
 	return &AlreadyExistsError{
-		OrderID: orderID,
-		Err:     err,
+		Entity: entity,
+		ID:     id,
+		Err:    err,
 	}
 }

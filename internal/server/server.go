@@ -18,7 +18,7 @@ type Server struct {
 func New(cfg config.AppConfig, h handler.HTTPHandler) *Server {
 	return &Server{
 		Instance: &http.Server{
-			Addr:    cfg.ServerAddress,
+			Addr:    cfg.RunAddress,
 			Handler: SetupMux(&h, cfg),
 		},
 	}
@@ -35,7 +35,7 @@ func SetupMux(h *handler.HTTPHandler, cfg config.AppConfig) http.Handler {
 	r := chi.NewRouter()
 	dmw := DefaultMiddleware(cfg)
 
-	r.Post("/api/user/register", dmw(nil))
+	r.Post("/api/user/register", dmw(h.User.Register))
 	r.Post("/api/user/login", dmw(nil))
 	r.Post("/api/user/orders", dmw(nil))
 	r.Get("/api/user/orders", dmw(nil))
