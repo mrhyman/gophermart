@@ -35,16 +35,16 @@ func NewRepository(dsn string) (*Repository, error) {
 	return &Repository{db}, nil
 }
 
-func (ds *Repository) Ping() error {
-	return ds.db.Ping()
+func (r *Repository) Ping() error {
+	return r.db.Ping()
 }
 
-func (ds *Repository) Close() error {
-	return ds.db.Close()
+func (r *Repository) Close() error {
+	return r.db.Close()
 }
 
-func (ds *Repository) MigrateUp(migrationsDir, dsn string) error {
-	driver, err := postgres.WithInstance(ds.db.DB, &postgres.Config{})
+func (r *Repository) MigrateUp(migrationsDir, dsn string) error {
+	driver, err := postgres.WithInstance(r.db.DB, &postgres.Config{})
 	if err != nil {
 		return fmt.Errorf("failed to create migrate driver: %w", err)
 	}
@@ -64,7 +64,7 @@ func (ds *Repository) MigrateUp(migrationsDir, dsn string) error {
 	return nil
 }
 
-func (ds *Repository) convertPgError(ctx context.Context, entity, id string, err error) error {
+func (r *Repository) convertPgError(ctx context.Context, entity, id string, err error) error {
 	var pgErr *pq.Error
 	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
 		return model.NewAlreadyExistsError(entity, id, err)

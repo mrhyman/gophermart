@@ -5,11 +5,14 @@ import (
 )
 
 type HTTPHandler struct {
-	User *UserHandler
+	User   *UserHandler
+	Order  *OrderHandler
+	Secret string
 }
 
-func New(svc service.Service) *HTTPHandler {
+func New(svc service.Service, secret string) *HTTPHandler {
 	return &HTTPHandler{
-		User: NewUserHandler(&svc),
+		User:  NewUserHandler(&svc, secret),
+		Order: NewOrderHandler(&svc),
 	}
 }

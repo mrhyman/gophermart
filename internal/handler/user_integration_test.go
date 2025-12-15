@@ -59,10 +59,11 @@ func setupTestDB(t *testing.T) (*repository.Repository, func()) {
 
 func TestUserHandler_Register_Integration(t *testing.T) {
 	repo, cleanup := setupTestDB(t)
+	secret := "testsecret"
 	defer cleanup()
 
 	svc := service.New(repo)
-	h := handler.New(*svc)
+	h := handler.New(*svc, secret)
 
 	t.Run("successful registration", func(t *testing.T) {
 		reqBody := api.RegisterRequest{
@@ -158,10 +159,11 @@ func TestUserHandler_Register_Integration(t *testing.T) {
 
 func TestUserHandler_Login_Integration(t *testing.T) {
 	repo, cleanup := setupTestDB(t)
+	secret := "testsecret"
 	defer cleanup()
 
 	svc := service.New(repo)
-	h := handler.New(*svc)
+	h := handler.New(*svc, secret)
 
 	// Подготовка: регистрируем пользователя
 	login := "loginuser"

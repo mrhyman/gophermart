@@ -8,6 +8,7 @@ type User struct {
 	ID       uuid.UUID `db:"id"`
 	Login    string    `db:"login"`
 	Password string    `db:"password"`
+	Balance  int       `db:"balance"`
 }
 
 func NewUser(

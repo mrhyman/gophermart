@@ -6,18 +6,21 @@ import (
 	"net/http"
 
 	"github.com/mrhyman/gophermart/api"
+	"github.com/mrhyman/gophermart/internal/auth"
 	"github.com/mrhyman/gophermart/internal/logger"
 	"github.com/mrhyman/gophermart/internal/model"
 	"github.com/mrhyman/gophermart/internal/service"
 )
 
 type UserHandler struct {
-	us *service.UserService
+	us     *service.UserService
+	secret string
 }
 
-func NewUserHandler(svc *service.Service) *UserHandler {
+func NewUserHandler(svc *service.Service, secret string) *UserHandler {
 	return &UserHandler{
-		us: svc.User,
+		us:     svc.User,
+		secret: secret,
 	}
 }
 
@@ -44,7 +47,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.us.Register(r.Context(), req.Login, req.Password)
+	userID, err := h.us.Register(r.Context(), req.Login, req.Password)
 	if err != nil {
 		var existsErr *model.AlreadyExistsError
 
@@ -58,6 +61,12 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, model.ErrWentWrong.Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+
+	if err := h.setAuthCookie(w, userID); err != nil {
+		log.With("err", err.Error()).Error()
+		http.Error(w, model.ErrWentWrong.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -86,7 +95,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.us.Login(r.Context(), req.Login, req.Password)
+	userID, err := h.us.Login(r.Context(), req.Login, req.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, model.ErrInvalidCredentials):
@@ -100,5 +109,35 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if err := h.setAuthCookie(w, userID); err != nil {
+		log.With("err", err.Error()).Error()
+		http.Error(w, model.ErrWentWrong.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *UserHandler) setAuthCookie(w http.ResponseWriter, userID string) error {
+	ce, err := auth.NewCookieEncoder(h.secret)
+	if err != nil {
+		return err
+	}
+
+	encodedUserID, err := ce.EncodeUserID(userID)
+	if err != nil {
+		return err
+	}
+
+	cookie := &http.Cookie{
+		Name:     string(model.AuthCookie),
+		Value:    encodedUserID,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false, // true для production с HTTPS
+		SameSite: http.SameSiteLaxMode,
+	}
+
+	http.SetCookie(w, cookie)
+	return nil
 }

@@ -255,7 +255,7 @@ func TestCompressReader(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, gzWriter.Close())
 
-		cr, err := newCompressReader(nil, io.NopCloser(&buf))
+		cr, err := newCompressReader(t.Context(), io.NopCloser(&buf))
 		require.NoError(t, err)
 		defer cr.Close()
 

@@ -13,6 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
+	uuid "github.com/google/uuid"
+	sqlx "github.com/jmoiron/sqlx"
 	model "github.com/mrhyman/gophermart/internal/model"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -41,18 +43,76 @@ func (m *MockUserRepository) EXPECT() *MockUserRepositoryMockRecorder {
 	return m.recorder
 }
 
-// CreateUser mocks base method.
-func (m *MockUserRepository) CreateUser(ctx context.Context, login, password string) error {
+// AddBalance mocks base method.
+func (m *MockUserRepository) AddBalance(ctx context.Context, userID uuid.UUID, amount int) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateUser", ctx, login, password)
+	ret := m.ctrl.Call(m, "AddBalance", ctx, userID, amount)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddBalance indicates an expected call of AddBalance.
+func (mr *MockUserRepositoryMockRecorder) AddBalance(ctx, userID, amount any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBalance", reflect.TypeOf((*MockUserRepository)(nil).AddBalance), ctx, userID, amount)
+}
+
+// AddBalanceTx mocks base method.
+func (m *MockUserRepository) AddBalanceTx(ctx context.Context, tx *sqlx.Tx, userID uuid.UUID, amount int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddBalanceTx", ctx, tx, userID, amount)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddBalanceTx indicates an expected call of AddBalanceTx.
+func (mr *MockUserRepositoryMockRecorder) AddBalanceTx(ctx, tx, userID, amount any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBalanceTx", reflect.TypeOf((*MockUserRepository)(nil).AddBalanceTx), ctx, tx, userID, amount)
+}
+
+// CreateUser mocks base method.
+func (m *MockUserRepository) CreateUser(ctx context.Context, user model.User) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateUser", ctx, user)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateUser indicates an expected call of CreateUser.
-func (mr *MockUserRepositoryMockRecorder) CreateUser(ctx, login, password any) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) CreateUser(ctx, user any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockUserRepository)(nil).CreateUser), ctx, login, password)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockUserRepository)(nil).CreateUser), ctx, user)
+}
+
+// GetBalance mocks base method.
+func (m *MockUserRepository) GetBalance(ctx context.Context, userID uuid.UUID) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBalance", ctx, userID)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBalance indicates an expected call of GetBalance.
+func (mr *MockUserRepositoryMockRecorder) GetBalance(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBalance", reflect.TypeOf((*MockUserRepository)(nil).GetBalance), ctx, userID)
+}
+
+// GetUserByID mocks base method.
+func (m *MockUserRepository) GetUserByID(ctx context.Context, userID uuid.UUID) (*model.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserByID", ctx, userID)
+	ret0, _ := ret[0].(*model.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserByID indicates an expected call of GetUserByID.
+func (mr *MockUserRepositoryMockRecorder) GetUserByID(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByID", reflect.TypeOf((*MockUserRepository)(nil).GetUserByID), ctx, userID)
 }
 
 // GetUserByLogin mocks base method.

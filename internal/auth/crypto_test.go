@@ -153,7 +153,7 @@ func TestCrypto_EncryptDecrypt_Integration(t *testing.T) {
 		plaintext []byte
 	}{
 		{"simple text", []byte("Hello, World!")},
-		{"empty", []byte{}},
+		{"empty", nil},
 		{"with special chars", []byte("Test\n\t\r!@#$%^&*()")},
 		{"unicode", []byte("Привет, мир! 你好世界")},
 		{"binary data", []byte{0x00, 0xFF, 0x01, 0xFE, 0x02, 0xFD}},

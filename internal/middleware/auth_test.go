@@ -30,7 +30,7 @@ func TestWithAuth(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.AddCookie(&http.Cookie{
-			Name:  "X-Auth-Token",
+			Name:  string(model.AuthCookie),
 			Value: encodedUserID,
 		})
 
@@ -57,7 +57,7 @@ func TestWithAuth(t *testing.T) {
 	t.Run("fail with invalid cookie value", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.AddCookie(&http.Cookie{
-			Name:  "X-Auth-Token",
+			Name:  string(model.AuthCookie),
 			Value: "invalid-cookie-value",
 		})
 
@@ -80,7 +80,7 @@ func TestWithAuth(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.AddCookie(&http.Cookie{
-			Name:  "X-Auth-Token",
+			Name:  string(model.AuthCookie),
 			Value: encodedUserID,
 		})
 
@@ -111,7 +111,7 @@ func TestWithAuth(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.AddCookie(&http.Cookie{
-			Name:  "X-Auth-Token",
+			Name:  string(model.AuthCookie),
 			Value: encodedUserID,
 		})
 

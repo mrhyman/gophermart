@@ -21,7 +21,7 @@ func WithAuth(secret string) func(http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 
-			cookie, err := r.Cookie("X-Auth-Token")
+			cookie, err := r.Cookie(string(model.AuthCookie))
 			if err != nil {
 				log.With("err", err.Error()).Warn()
 				http.Error(w, model.ErrWentWrong.Error(), http.StatusUnauthorized)

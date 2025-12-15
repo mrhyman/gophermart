@@ -41,7 +41,7 @@ func SetupMux(h *handler.HTTPHandler, cfg config.AppConfig) http.Handler {
 	r.Post("/api/user/login", publicMW(h.User.Login))
 
 	// Защищенные роуты (с авторизацией)
-	r.Post("/api/user/orders", authMW(nil))
+	r.Post("/api/user/orders", authMW(h.Order.UploadOrder))
 	r.Get("/api/user/orders", authMW(nil))
 	r.Get("/api/user/balance", authMW(nil))
 	r.Post("/api/user/balance/withdraw", authMW(nil))

@@ -25,17 +25,24 @@ func TestUserService_Register(t *testing.T) {
 		password := "password123"
 
 		mockRepo.EXPECT().
-			CreateUser(gomock.Any(), login, gomock.Any()).
-			DoAndReturn(func(ctx context.Context, l, p string) error {
+			CreateUser(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, user model.User) error {
 				// Проверяем, что пароль был захеширован
-				assert.NotEqual(t, password, p)
-				assert.Greater(t, len(p), 50)
+				assert.NotEqual(t, password, user.Password)
+				assert.Greater(t, len(user.Password), 50)
+				assert.Equal(t, login, user.Login)
+				assert.NotEqual(t, uuid.Nil, user.ID)
 				return nil
 			}).
 			Times(1)
 
-		err := svc.Register(context.Background(), login, password)
+		userID, err := svc.Register(context.Background(), login, password)
 
+		require.NoError(t, err)
+		assert.NotEmpty(t, userID)
+
+		// Проверяем, что вернулся валидный UUID
+		_, err = uuid.Parse(userID)
 		assert.NoError(t, err)
 	})
 
@@ -49,15 +56,15 @@ func TestUserService_Register(t *testing.T) {
 		login := "existinguser"
 		password := "password123"
 
-		// Репозиторий возвращает ошибку AlreadyExistsError
 		mockRepo.EXPECT().
-			CreateUser(gomock.Any(), login, gomock.Any()).
+			CreateUser(gomock.Any(), gomock.Any()).
 			Return(model.NewAlreadyExistsError("user", login, nil)).
 			Times(1)
 
-		err := svc.Register(context.Background(), login, password)
+		userID, err := svc.Register(context.Background(), login, password)
 
 		assert.Error(t, err)
+		assert.Empty(t, userID)
 		var alreadyExistsErr *model.AlreadyExistsError
 		assert.ErrorAs(t, err, &alreadyExistsErr)
 	})
@@ -73,14 +80,42 @@ func TestUserService_Register(t *testing.T) {
 		password := "password123"
 
 		mockRepo.EXPECT().
-			CreateUser(gomock.Any(), login, gomock.Any()).
+			CreateUser(gomock.Any(), gomock.Any()).
 			Return(assert.AnError).
 			Times(1)
 
-		err := svc.Register(context.Background(), login, password)
+		userID, err := svc.Register(context.Background(), login, password)
 
 		assert.Error(t, err)
+		assert.Empty(t, userID)
 		assert.Equal(t, assert.AnError, err)
+	})
+
+	t.Run("different users get different IDs", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockRepo := mocks.NewMockUserRepository(ctrl)
+		svc := NewUserService(mockRepo)
+
+		var capturedIDs []uuid.UUID
+
+		mockRepo.EXPECT().
+			CreateUser(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, user model.User) error {
+				capturedIDs = append(capturedIDs, user.ID)
+				return nil
+			}).
+			Times(2)
+
+		userID1, err1 := svc.Register(context.Background(), "user1", "pass1")
+		userID2, err2 := svc.Register(context.Background(), "user2", "pass2")
+
+		require.NoError(t, err1)
+		require.NoError(t, err2)
+		assert.NotEqual(t, userID1, userID2)
+		assert.Len(t, capturedIDs, 2)
+		assert.NotEqual(t, capturedIDs[0], capturedIDs[1])
 	})
 }
 
@@ -94,23 +129,26 @@ func TestUserService_Login(t *testing.T) {
 
 		login := "testuser"
 		password := "password123"
+		expectedUserID := uuid.New()
 
 		hashedPassword, err := auth.HashPassword(password)
 		require.NoError(t, err)
 
 		user := &model.User{
-			ID:       uuid.New(),
+			ID:       expectedUserID,
 			Login:    login,
 			Password: hashedPassword,
 		}
 
 		mockRepo.EXPECT().
 			GetUserByLogin(gomock.Any(), login).
-			Return(user, nil)
+			Return(user, nil).
+			Times(1)
 
-		err = svc.Login(context.Background(), login, password)
+		userID, err := svc.Login(context.Background(), login, password)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		assert.Equal(t, expectedUserID.String(), userID)
 	})
 
 	t.Run("user not found", func(t *testing.T) {
@@ -125,11 +163,14 @@ func TestUserService_Login(t *testing.T) {
 
 		mockRepo.EXPECT().
 			GetUserByLogin(gomock.Any(), login).
-			Return(nil, model.ErrInvalidCredentials)
+			Return(nil, model.ErrNotFound).
+			Times(1)
 
-		err := svc.Login(context.Background(), login, password)
+		userID, err := svc.Login(context.Background(), login, password)
 
-		assert.ErrorIs(t, err, model.ErrInvalidCredentials)
+		assert.Error(t, err)
+		assert.Empty(t, userID)
+		assert.Equal(t, model.ErrNotFound, err)
 	})
 
 	t.Run("wrong password", func(t *testing.T) {
@@ -154,11 +195,13 @@ func TestUserService_Login(t *testing.T) {
 
 		mockRepo.EXPECT().
 			GetUserByLogin(gomock.Any(), login).
-			Return(user, nil)
+			Return(user, nil).
+			Times(1)
 
-		err = svc.Login(context.Background(), login, wrongPassword)
+		userID, err := svc.Login(context.Background(), login, wrongPassword)
 
 		assert.ErrorIs(t, err, model.ErrInvalidCredentials)
+		assert.Empty(t, userID)
 	})
 
 	t.Run("repository error", func(t *testing.T) {
@@ -173,11 +216,40 @@ func TestUserService_Login(t *testing.T) {
 
 		mockRepo.EXPECT().
 			GetUserByLogin(gomock.Any(), login).
-			Return(nil, assert.AnError)
+			Return(nil, assert.AnError).
+			Times(1)
 
-		err := svc.Login(context.Background(), login, password)
+		userID, err := svc.Login(context.Background(), login, password)
 
 		assert.Error(t, err)
+		assert.Empty(t, userID)
 		assert.Equal(t, assert.AnError, err)
+	})
+
+	t.Run("empty password in database", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockRepo := mocks.NewMockUserRepository(ctrl)
+		svc := NewUserService(mockRepo)
+
+		login := "testuser"
+		password := "password123"
+
+		user := &model.User{
+			ID:       uuid.New(),
+			Login:    login,
+			Password: "", // Пустой пароль
+		}
+
+		mockRepo.EXPECT().
+			GetUserByLogin(gomock.Any(), login).
+			Return(user, nil).
+			Times(1)
+
+		userID, err := svc.Login(context.Background(), login, password)
+
+		assert.ErrorIs(t, err, model.ErrInvalidCredentials)
+		assert.Empty(t, userID)
 	})
 }
