@@ -7,6 +7,13 @@ import (
 	"github.com/mrhyman/gophermart/internal/model"
 )
 
+//go:generate mockgen -source=user.go -destination=mocks/mock_user_repository.go -package=mocks
+
+type UserRepository interface {
+	CreateUser(ctx context.Context, login string, password string) error
+	GetUserByLogin(ctx context.Context, login string) (*model.User, error)
+}
+
 func (r *Repository) CreateUser(ctx context.Context, login string, password string) error {
 	user := &model.User{
 		ID:       uuid.New(),

@@ -8,13 +8,9 @@ type Service struct {
 	// Balance *BalanceService
 }
 
-// type Service struct {
-// 	repo repository.Repository
-// }
-
 func New(repo *repository.Repository) *Service {
 	return &Service{
-		User: NewUserService(*repo),
+		User: NewUserService(repo),
 		// Order:   NewOrderService(repo),
 		// Balance: NewBalanceService(repo),
 	}

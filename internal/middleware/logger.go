@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/mrhyman/gophermart/internal/model"
 	"github.com/mrhyman/gophermart/internal/logger"
+	"github.com/mrhyman/gophermart/internal/model"
 )
 
 type logWriter struct {
