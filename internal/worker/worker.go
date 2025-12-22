@@ -3,9 +3,9 @@ package worker
 import (
 	"context"
 	"errors"
-	"sync"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/mrhyman/gophermart/internal/client"
 	"github.com/mrhyman/gophermart/internal/logger"
 	"github.com/mrhyman/gophermart/internal/model"
@@ -31,6 +31,7 @@ func NewAccrualWorker(
 ) *AccrualWorker {
 	return &AccrualWorker{
 		orderRepo:     repo,
+		userRepo:      userRepo,
 		accrualClient: accrualClient,
 		pollInterval:  pollInterval,
 		batchSize:     batchSize,
@@ -39,10 +40,15 @@ func NewAccrualWorker(
 }
 
 func (w *AccrualWorker) Start(ctx context.Context) {
-	log := logger.FromContext(ctx)
-	log.With("pool_size", w.poolSize, "batch_size", w.batchSize).Info("starting accrual worker")
+	for i := 0; i < w.poolSize; i++ {
+		go w.worker(ctx, i, w.pollInterval, w.batchSize)
+	}
+}
 
-	ticker := time.NewTicker(w.pollInterval)
+func (w *AccrualWorker) worker(ctx context.Context, workerID int, pollInterval time.Duration, batchSize int) {
+	log := logger.FromContext(ctx).With("worker_id", workerID)
+
+	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
 	for {
@@ -51,73 +57,14 @@ func (w *AccrualWorker) Start(ctx context.Context) {
 			log.Info("stopping accrual worker")
 			return
 		case <-ticker.C:
-			if err := w.processBatches(ctx); err != nil {
+			if err := w.processBatch(ctx, batchSize); err != nil {
 				log.With("err", err.Error()).Error()
 			}
 		}
 	}
 }
 
-func (w *AccrualWorker) processBatches(ctx context.Context) error {
-	log := logger.FromContext(ctx)
-
-	totalOrders, err := w.orderRepo.CountOrdersByStatus(ctx, model.OrderStatusNew)
-	if err != nil {
-		return err
-	}
-
-	if totalOrders == 0 {
-		log.Debug("no orders to process")
-		return nil
-	}
-
-	log.With("total_orders", totalOrders).Info("starting batch processing")
-
-	jobs := make(chan int, w.poolSize)
-
-	var wg sync.WaitGroup
-
-	for i := 0; i < w.poolSize; i++ {
-		wg.Add(1)
-		go func(workerID int) {
-			defer wg.Done()
-			w.worker(ctx, workerID, jobs)
-		}(i)
-	}
-
-	go func() {
-		for offset := 0; offset < totalOrders; offset += w.batchSize {
-			select {
-			case <-ctx.Done():
-				return
-			case jobs <- offset:
-			}
-		}
-		close(jobs)
-	}()
-
-	wg.Wait()
-
-	log.Info("batch processing completed")
-	return nil
-}
-
-func (w *AccrualWorker) worker(ctx context.Context, workerID int, jobs <-chan int) {
-	log := logger.FromContext(ctx).With("worker_id", workerID)
-
-	for offset := range jobs {
-		if err := w.processBatch(ctx, offset); err != nil {
-			log.With("offset", offset, "err", err.Error()).Error()
-
-			if errors.Is(err, model.ErrAccrualTooManyRequests) {
-				log.Warn("too many requests, stopping worker")
-				return
-			}
-		}
-	}
-}
-
-func (w *AccrualWorker) processBatch(ctx context.Context, offset int) error {
+func (w *AccrualWorker) processBatch(ctx context.Context, batchSize int) error {
 	log := logger.FromContext(ctx)
 
 	tx, err := w.orderRepo.BeginTx(ctx)
@@ -126,7 +73,8 @@ func (w *AccrualWorker) processBatch(ctx context.Context, offset int) error {
 	}
 	defer tx.Rollback()
 
-	orders, err := w.orderRepo.GetOrdersForProcessing(ctx, tx, model.OrderStatusNew, w.batchSize, offset)
+	orders, err := w.orderRepo.GetOrdersForProcessing(ctx, tx, w.batchSize)
+
 	if err != nil {
 		return err
 	}
@@ -135,10 +83,8 @@ func (w *AccrualWorker) processBatch(ctx context.Context, offset int) error {
 		return nil
 	}
 
-	log.With("offset", offset, "count", len(orders)).Debug("processing batch")
-
 	for _, order := range orders {
-		if err := w.processOrder(ctx, order); err != nil {
+		if err := w.processOrder(ctx, tx, order); err != nil {
 			log.With("order", order.Number, "err", err.Error()).Error()
 
 			if errors.Is(err, model.ErrAccrualTooManyRequests) {
@@ -150,7 +96,7 @@ func (w *AccrualWorker) processBatch(ctx context.Context, offset int) error {
 	return tx.Commit()
 }
 
-func (w *AccrualWorker) processOrder(ctx context.Context, order *model.Order) error {
+func (w *AccrualWorker) processOrder(ctx context.Context, tx *sqlx.Tx, order *model.Order) error {
 	log := logger.FromContext(ctx)
 
 	accrualResp, err := w.accrualClient.GetOrderAccrual(ctx, order.Number)
@@ -167,16 +113,18 @@ func (w *AccrualWorker) processOrder(ctx context.Context, order *model.Order) er
 		return err
 	}
 
-	if newStatus == order.Status && accrualResp.Accrual == nil {
-		return nil
-	}
+	// if newStatus == order.Status && accrualResp.Accrual == nil {
+	// 	return nil
+	// }
 
 	var accrual int
 	if accrualResp.Accrual != nil {
-		accrual = *accrualResp.Accrual * 100
+		accrual = int(*accrualResp.Accrual * 100)
 	}
 
-	if err := w.updateOrderAndBalance(ctx, order, newStatus, accrual); err != nil {
+	log.With("before_update", "accrual", accrual, "status", newStatus).Debug()
+
+	if err := w.updateOrderAndBalance(ctx, tx, order, newStatus, accrual); err != nil {
 		return err
 	}
 
@@ -186,25 +134,18 @@ func (w *AccrualWorker) processOrder(ctx context.Context, order *model.Order) er
 
 func (w *AccrualWorker) updateOrderAndBalance(
 	ctx context.Context,
+	tx *sqlx.Tx,
 	order *model.Order,
 	newStatus model.OrderStatus,
 	accrual int,
 ) error {
-	tx, err := w.orderRepo.BeginTx(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
+	log := logger.FromContext(ctx)
 
 	if err := w.orderRepo.UpdateOrderStatusTx(ctx, tx, order.ID, newStatus, accrual); err != nil {
 		return err
 	}
 
-	if newStatus == model.OrderStatusProcessed && accrual > 0 {
-		if err := w.userRepo.AddBalanceTx(ctx, tx, order.UserID, accrual); err != nil {
-			return err
-		}
-	}
+	log.With("inside_update", "accrual", accrual, "status", newStatus).Debug()
 
-	return tx.Commit()
+	return w.userRepo.AddBalanceTx(ctx, tx, order.UserID, accrual)
 }

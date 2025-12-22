@@ -3,16 +3,21 @@ package config
 import (
 	"context"
 	"flag"
+	"time"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/mrhyman/gophermart/internal/logger"
 )
 
 const (
-	DefaultRunAddress     = "localhost:9090"
+	DefaultRunAddress     = "localhost:8080"
 	DefaultDBURI          = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
-	DefaultAccrualAddress = "localhost:8080"
+	DefaultAccrualAddress = "localhost:9090"
 	DefaultHashKey        = "qwerty12345"
+	WorkerPollInterval    = 1 * time.Second
+	WorkerBatchSize       = 10
+	WorkerPoolSize        = 3
+	AccuralRequestTimeout = 10 * time.Second
 )
 
 type AppConfig struct {

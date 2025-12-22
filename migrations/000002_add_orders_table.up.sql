@@ -1,5 +1,5 @@
 DO $$ BEGIN
-    CREATE TYPE order_status AS ENUM ('NEW', 'INVALID', 'PROCESSED');
+    CREATE TYPE order_status AS ENUM ('NEW', 'PROCESSING', 'INVALID', 'PROCESSED');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;

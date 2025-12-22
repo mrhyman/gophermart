@@ -36,16 +36,16 @@ func SetupMux(h *handler.HTTPHandler, cfg config.AppConfig) http.Handler {
 	publicMW := PublicMiddleware()
 	authMW := AuthMiddleware(cfg)
 
-	// Публичные роуты (без авторизации)
+	// Роуты без авторизации
 	r.Post("/api/user/register", publicMW(h.User.Register))
 	r.Post("/api/user/login", publicMW(h.User.Login))
 
-	// Защищенные роуты (с авторизацией)
+	// Роуты с авторизацией
 	r.Post("/api/user/orders", authMW(h.Order.UploadOrder))
-	r.Get("/api/user/orders", authMW(nil))
-	r.Get("/api/user/balance", authMW(nil))
-	r.Post("/api/user/balance/withdraw", authMW(nil))
-	r.Get("/api/user/withdrawals", authMW(nil))
+	r.Get("/api/user/orders", authMW(h.Order.GetOrderList))
+	r.Get("/api/user/balance", authMW(h.Balance.GetBalance))
+	r.Post("/api/user/balance/withdraw", authMW(h.Balance.Withdraw))
+	r.Get("/api/user/withdrawals", authMW(h.Balance.GetWithdrawals))
 
 	return r
 }

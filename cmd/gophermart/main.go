@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"time"
 
 	"github.com/mrhyman/gophermart/internal/client"
 	"github.com/mrhyman/gophermart/internal/config"
@@ -35,9 +34,9 @@ func main() {
 		repo,
 		repo,
 		accrualClient,
-		5*time.Second,
-		10,
-		3,
+		config.WorkerPollInterval,
+		config.WorkerBatchSize,
+		config.WorkerPoolSize,
 	)
 
 	workerCtx, cancel := context.WithCancel(ctx)

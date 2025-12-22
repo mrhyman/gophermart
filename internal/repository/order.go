@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/mrhyman/gophermart/internal/logger"
 	"github.com/mrhyman/gophermart/internal/model"
 )
 
@@ -18,7 +19,7 @@ type OrderRepository interface {
 	GetOrderByNumber(ctx context.Context, number string) (*model.Order, error)
 	GetUserOrders(ctx context.Context, userID uuid.UUID) ([]*model.Order, error)
 	CountOrdersByStatus(ctx context.Context, status model.OrderStatus) (int, error)
-	GetOrdersForProcessing(ctx context.Context, tx *sqlx.Tx, status model.OrderStatus, limit int, offset int) ([]*model.Order, error)
+	GetOrdersForProcessing(ctx context.Context, tx *sqlx.Tx, limit int) ([]*model.Order, error)
 	UpdateOrderStatus(ctx context.Context, orderID uuid.UUID, status model.OrderStatus, accrual int) error
 	UpdateOrderStatusTx(ctx context.Context, tx *sqlx.Tx, orderID uuid.UUID, status model.OrderStatus, accrual int) error
 	BeginTx(ctx context.Context) (*sqlx.Tx, error)
@@ -74,7 +75,7 @@ func (r *Repository) GetOrderByNumber(ctx context.Context, number string) (*mode
 
 func (r *Repository) GetUserOrders(ctx context.Context, userID uuid.UUID) ([]*model.Order, error) {
 	query := `
-		SELECT id, user_id, number, status, created_at 
+		SELECT id, user_id, number, status, accrual, created_at 
 		FROM orders 
 		WHERE user_id = $1 
 		ORDER BY created_at DESC
@@ -100,21 +101,19 @@ func (r *Repository) CountOrdersByStatus(ctx context.Context, status model.Order
 func (r *Repository) GetOrdersForProcessing(
 	ctx context.Context,
 	tx *sqlx.Tx,
-	status model.OrderStatus,
 	limit int,
-	offset int,
 ) ([]*model.Order, error) {
 	query := `
-		SELECT * 
+		SELECT id, user_id, number, status, accrual, created_at
 		FROM orders 
-		WHERE status = $1 
-		ORDER BY created_at ASC
-		LIMIT $2 OFFSET $3
+		WHERE status IN ('NEW', 'PROCESSING')
+		ORDER BY created_at
+		LIMIT $1
 		FOR UPDATE SKIP LOCKED
 	`
 
 	var orders []*model.Order
-	err := tx.SelectContext(ctx, &orders, query, status, limit, offset)
+	err := tx.SelectContext(ctx, &orders, query, limit)
 
 	return orders, err
 }
@@ -132,14 +131,25 @@ func (r *Repository) UpdateOrderStatusTx(
 	status model.OrderStatus,
 	accrual int,
 ) error {
+	log := logger.FromContext(ctx)
+	log.With("orderID", orderID, "status", status, "accrual", accrual).Debug("updating order")
+
 	query := `
 		UPDATE orders 
 		SET status = $1, accrual = $2 
 		WHERE id = $3
 	`
 
-	_, err := tx.ExecContext(ctx, query, status, accrual, orderID)
-	return err
+	result, err := tx.ExecContext(ctx, query, status, accrual, orderID)
+	if err != nil {
+		log.With("err", err.Error()).Error("update failed")
+		return err
+	}
+
+	rows, _ := result.RowsAffected()
+	log.With("rows_affected", rows).Debug("update completed")
+
+	return nil
 }
 
 func (r *Repository) UpdateOrderStatus(

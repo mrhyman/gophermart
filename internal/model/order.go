@@ -18,15 +18,18 @@ const (
 type OrderStatus string
 
 const (
-	OrderStatusNew       OrderStatus = "NEW"
-	OrderStatusInvalid   OrderStatus = "INVALID"
-	OrderStatusProcessed OrderStatus = "PROCESSED"
+	OrderStatusNew        OrderStatus = "NEW"
+	OrderStatusProcessing OrderStatus = "PROCESSING"
+	OrderStatusInvalid    OrderStatus = "INVALID"
+	OrderStatusProcessed  OrderStatus = "PROCESSED"
 )
 
 func MapAccrualStatusToOrderStatus(accrualStatus AccrualStatus) (OrderStatus, error) {
 	switch accrualStatus {
-	case AccrualStatusNew, AccrualStatusProcessing:
+	case AccrualStatusNew:
 		return OrderStatusNew, nil
+	case AccrualStatusProcessing:
+		return OrderStatusProcessing, nil
 	case AccrualStatusInvalid:
 		return OrderStatusInvalid, nil
 	case AccrualStatusProcessed:
@@ -42,7 +45,7 @@ type Order struct {
 	Number    string      `db:"number" json:"number"`
 	Status    OrderStatus `db:"status" json:"status"`
 	Accrual   int         `db:"accrual" json:"accrual"`
-	CreatedAt time.Time   `db:"created_at" json:"created_at"`
+	CreatedAt time.Time   `db:"created_at" json:"uploaded_at"`
 }
 
 func NewOrder(

@@ -5,14 +5,16 @@ import (
 )
 
 type HTTPHandler struct {
-	User   *UserHandler
-	Order  *OrderHandler
-	Secret string
+	User    *UserHandler
+	Order   *OrderHandler
+	Balance *BalanceHandler
+	Secret  string
 }
 
 func New(svc service.Service, secret string) *HTTPHandler {
 	return &HTTPHandler{
-		User:  NewUserHandler(&svc, secret),
-		Order: NewOrderHandler(&svc),
+		User:    NewUserHandler(&svc, secret),
+		Order:   NewOrderHandler(&svc),
+		Balance: NewBalanceHandler(&svc),
 	}
 }

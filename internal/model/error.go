@@ -20,6 +20,8 @@ var (
 	ErrInvalidOrderNumber         = errors.New("invalid order number")
 	ErrOrderAlreadyUploaded       = errors.New("order already uploaded")
 	ErrOrderUploadedByAnotherUser = errors.New("order uploaded by another user")
+	ErrResponseEncoding           = errors.New("can't encode response")
+	ErrInsufficientFunds          = errors.New("insufficient funds")
 	// accrual errors
 	ErrAccrualRequestCreateFailed = errors.New("can't create accrual request")
 	ErrAccrualRequestSendFailed   = errors.New("can't send accrual request")

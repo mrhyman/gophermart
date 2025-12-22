@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/mrhyman/gophermart/api"
+	"github.com/mrhyman/gophermart/internal/config"
 	"github.com/mrhyman/gophermart/internal/logger"
 	"github.com/mrhyman/gophermart/internal/model"
 )
@@ -22,7 +22,7 @@ func NewAccrualClient(baseURL string) *AccrualClient {
 	return &AccrualClient{
 		baseURL: normalizeBaseURL(baseURL),
 		httpClient: &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: config.AccuralRequestTimeout,
 		},
 	}
 }
@@ -31,6 +31,8 @@ func (c *AccrualClient) GetOrderAccrual(ctx context.Context, orderNumber string)
 	log := logger.FromContext(ctx)
 
 	url := fmt.Sprintf("%s/api/orders/%s", c.baseURL, orderNumber)
+
+	log.With("url", url).Warn()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

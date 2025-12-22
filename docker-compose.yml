@@ -11,5 +11,21 @@ services:
     ports:
       - "5432:5432"
 
+  wiremock:
+    image: "wiremock:latest"
+    container_name: wiremock
+    ports:
+      - 9090:8080
+    volumes:
+      - ./stubs/mappings/accural.json:/home/wiremock/mappings/accural.json:ro
+    entrypoint:
+      [
+        "/docker-entrypoint.sh",
+        "--global-response-templating",
+        "--disable-gzip",
+        "--verbose",
+        "--record-mappings",
+      ]
+
 volumes:
   pg_data:
