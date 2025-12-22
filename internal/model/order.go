@@ -41,8 +41,8 @@ type Order struct {
 	UserID    uuid.UUID   `db:"user_id" json:"user_id"`
 	Number    string      `db:"number" json:"number"`
 	Status    OrderStatus `db:"status" json:"status"`
-	Accrual   int         `db:"accrual" json:"accrual"`
-	CreatedAt time.Time   `db:"created_at" json:"created_at"`
+	Accrual   int         `db:"accrual" json:"accrual,omitempty"`
+	CreatedAt time.Time   `db:"created_at" json:"uploaded_at"`
 }
 
 func NewOrder(
