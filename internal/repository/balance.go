@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 	"github.com/mrhyman/gophermart/internal/model"
 )
 
@@ -17,7 +18,17 @@ type BalanceRepository interface {
 	GetWithdrawals(ctx context.Context, userID uuid.UUID) ([]model.Withdrawal, error)
 }
 
-func (r *Repository) GetUserBalance(ctx context.Context, userID uuid.UUID) (int, int, error) {
+type BalanceRepo struct {
+	*GenericRepository[model.Withdrawal]
+}
+
+func NewBalanceRepository(db *sqlx.DB) *BalanceRepo {
+	return &BalanceRepo{
+		GenericRepository: NewGenericRepository[model.Withdrawal](db),
+	}
+}
+
+func (r *BalanceRepo) GetUserBalance(ctx context.Context, userID uuid.UUID) (int, int, error) {
 	query := `
 		SELECT u.balance, COALESCE(w.withdrawn, 0) AS withdrawn
 		FROM users u 
@@ -41,7 +52,7 @@ func (r *Repository) GetUserBalance(ctx context.Context, userID uuid.UUID) (int,
 	return current, withdrawn, nil
 }
 
-func (r *Repository) Withdraw(ctx context.Context, userID uuid.UUID, orderNumber string, sum int) error {
+func (r *BalanceRepo) Withdraw(ctx context.Context, userID uuid.UUID, orderNumber string, sum int) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -77,7 +88,7 @@ func (r *Repository) Withdraw(ctx context.Context, userID uuid.UUID, orderNumber
 	return tx.Commit()
 }
 
-func (r *Repository) GetWithdrawals(ctx context.Context, userID uuid.UUID) ([]model.Withdrawal, error) {
+func (r *BalanceRepo) GetWithdrawals(ctx context.Context, userID uuid.UUID) ([]model.Withdrawal, error) {
 	query := `
 		SELECT id, user_id, order_id, sum, processed_at 
 		FROM withdraws 

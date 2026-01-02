@@ -23,7 +23,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, userID uuid.UUID, number
 		return nil, model.ErrInvalidOrderNumber
 	}
 
-	existingOrder, err := s.repo.GetOrderByNumber(ctx, number)
+	existingOrder, err := s.repo.GetByNumber(ctx, number)
 	if err != nil && !errors.Is(err, model.ErrNotFound) {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, userID uuid.UUID, number
 		return nil, model.ErrOrderUploadedByAnotherUser
 	}
 
-	return s.repo.CreateOrder(ctx, userID, number)
+	return s.repo.Create(ctx, userID, number)
 }
 
 func (s *OrderService) GetUserOrders(ctx context.Context, userID uuid.UUID) ([]*model.Order, error) {

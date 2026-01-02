@@ -24,3 +24,5 @@ func NewUser(
 
 	return user, nil
 }
+
+func (User) TableName() string { return "users" }

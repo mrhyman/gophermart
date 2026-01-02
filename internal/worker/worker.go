@@ -101,7 +101,7 @@ func (w *AccrualWorker) processBatch(ctx context.Context, batchSize int) error {
 	}
 	defer tx.Rollback()
 
-	orders, err := w.orderRepo.GetOrdersForProcessing(ctx, tx, w.batchSize)
+	orders, err := w.orderRepo.GetForProcessing(ctx, tx, w.batchSize)
 
 	if err != nil {
 		return err
@@ -165,7 +165,7 @@ func (w *AccrualWorker) updateOrderAndBalance(
 ) error {
 	log := logger.FromContext(ctx)
 
-	if err := w.orderRepo.UpdateOrderStatusTx(ctx, tx, order.ID, newStatus, accrual); err != nil {
+	if err := w.orderRepo.UpdateStatusTx(ctx, tx, order.ID, newStatus, accrual); err != nil {
 		return err
 	}
 

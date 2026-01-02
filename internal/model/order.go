@@ -67,3 +67,5 @@ func NewOrder(
 
 	return user, nil
 }
+
+func (Order) TableName() string { return "orders" }

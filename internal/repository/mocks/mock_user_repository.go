@@ -71,18 +71,33 @@ func (mr *MockUserRepositoryMockRecorder) AddBalanceTx(ctx, tx, userID, amount a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBalanceTx", reflect.TypeOf((*MockUserRepository)(nil).AddBalanceTx), ctx, tx, userID, amount)
 }
 
-// CreateUser mocks base method.
-func (m *MockUserRepository) CreateUser(ctx context.Context, user model.User) error {
+// BeginTx mocks base method.
+func (m *MockUserRepository) BeginTx(ctx context.Context) (*sqlx.Tx, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateUser", ctx, user)
+	ret := m.ctrl.Call(m, "BeginTx", ctx)
+	ret0, _ := ret[0].(*sqlx.Tx)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BeginTx indicates an expected call of BeginTx.
+func (mr *MockUserRepositoryMockRecorder) BeginTx(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeginTx", reflect.TypeOf((*MockUserRepository)(nil).BeginTx), ctx)
+}
+
+// Create mocks base method.
+func (m *MockUserRepository) Create(ctx context.Context, user model.User) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, user)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// CreateUser indicates an expected call of CreateUser.
-func (mr *MockUserRepositoryMockRecorder) CreateUser(ctx, user any) *gomock.Call {
+// Create indicates an expected call of Create.
+func (mr *MockUserRepositoryMockRecorder) Create(ctx, user any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockUserRepository)(nil).CreateUser), ctx, user)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockUserRepository)(nil).Create), ctx, user)
 }
 
 // GetBalance mocks base method.
@@ -100,32 +115,32 @@ func (mr *MockUserRepositoryMockRecorder) GetBalance(ctx, userID any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBalance", reflect.TypeOf((*MockUserRepository)(nil).GetBalance), ctx, userID)
 }
 
-// GetUserByID mocks base method.
-func (m *MockUserRepository) GetUserByID(ctx context.Context, userID uuid.UUID) (*model.User, error) {
+// GetByID mocks base method.
+func (m *MockUserRepository) GetByID(ctx context.Context, userID uuid.UUID) (*model.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetUserByID", ctx, userID)
+	ret := m.ctrl.Call(m, "GetByID", ctx, userID)
 	ret0, _ := ret[0].(*model.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetUserByID indicates an expected call of GetUserByID.
-func (mr *MockUserRepositoryMockRecorder) GetUserByID(ctx, userID any) *gomock.Call {
+// GetByID indicates an expected call of GetByID.
+func (mr *MockUserRepositoryMockRecorder) GetByID(ctx, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByID", reflect.TypeOf((*MockUserRepository)(nil).GetUserByID), ctx, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockUserRepository)(nil).GetByID), ctx, userID)
 }
 
-// GetUserByLogin mocks base method.
-func (m *MockUserRepository) GetUserByLogin(ctx context.Context, login string) (*model.User, error) {
+// GetByLogin mocks base method.
+func (m *MockUserRepository) GetByLogin(ctx context.Context, login string) (*model.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetUserByLogin", ctx, login)
+	ret := m.ctrl.Call(m, "GetByLogin", ctx, login)
 	ret0, _ := ret[0].(*model.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetUserByLogin indicates an expected call of GetUserByLogin.
-func (mr *MockUserRepositoryMockRecorder) GetUserByLogin(ctx, login any) *gomock.Call {
+// GetByLogin indicates an expected call of GetByLogin.
+func (mr *MockUserRepositoryMockRecorder) GetByLogin(ctx, login any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByLogin", reflect.TypeOf((*MockUserRepository)(nil).GetUserByLogin), ctx, login)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByLogin", reflect.TypeOf((*MockUserRepository)(nil).GetByLogin), ctx, login)
 }

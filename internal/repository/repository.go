@@ -2,69 +2,103 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/mrhyman/gophermart/internal/model"
 )
 
-type Repository struct {
+type TxFunc func(tx *sqlx.Tx) error
+
+type Entity interface {
+	TableName() string
+}
+
+type GenericRepository[T Entity] struct {
 	db *sqlx.DB
 }
 
-func NewRepository(dsn string) (*Repository, error) {
-	db, err := sqlx.Open("postgres", dsn)
+func NewGenericRepository[T Entity](db *sqlx.DB) *GenericRepository[T] {
+	return &GenericRepository[T]{db: db}
+}
+
+func (r *GenericRepository[T]) GetByID(ctx context.Context, id uuid.UUID) (*T, error) {
+	var entity T
+	query := fmt.Sprintf(`SELECT * FROM %s WHERE id = $1`, entity.TableName())
+
+	err := r.db.GetContext(ctx, &entity, query, id)
 	if err != nil {
 		return nil, err
 	}
-
-	db.SetMaxOpenConns(10)
-	db.SetConnMaxLifetime(time.Hour)
-
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-
-	return &Repository{db}, nil
+	return &entity, nil
 }
 
-func (r *Repository) Ping() error {
-	return r.db.Ping()
+func (r *GenericRepository[T]) GetAll(ctx context.Context) ([]T, error) {
+	var entity T
+	var entities []T
+	query := fmt.Sprintf(`SELECT * FROM %s`, entity.TableName())
+
+	err := r.db.SelectContext(ctx, &entities, query)
+	return entities, err
 }
 
-func (r *Repository) Close() error {
-	return r.db.Close()
+func (r *GenericRepository[T]) Delete(ctx context.Context, id uuid.UUID) error {
+	var entity T
+	query := fmt.Sprintf(`DELETE FROM %s WHERE id = $1`, entity.TableName())
+
+	_, err := r.db.ExecContext(ctx, query, id)
+	return err
 }
 
-func (r *Repository) MigrateUp(migrationsDir, dsn string) error {
-	driver, err := postgres.WithInstance(r.db.DB, &postgres.Config{})
+func (r *GenericRepository[T]) Count(ctx context.Context) (int, error) {
+	var entity T
+	var count int
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM %s`, entity.TableName())
+
+	err := r.db.GetContext(ctx, &count, query)
+	return count, err
+}
+
+func (r *GenericRepository[T]) WithTx(ctx context.Context, fn TxFunc) error {
+	tx, err := r.db.BeginTxx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelReadCommitted,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to create migrate driver: %w", err)
+		return err
 	}
 
-	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file://%s", migrationsDir),
-		"postgres", driver,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create migrate instance: %w", err)
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		}
+	}()
+
+	if err := fn(tx); err != nil {
+		tx.Rollback()
+		return err
 	}
 
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		return fmt.Errorf("failed to run migrations: %w", err)
-	}
-
-	return nil
+	return tx.Commit()
 }
 
-func (r *Repository) convertPgError(ctx context.Context, entity, id string, err error) error {
+func (r *GenericRepository[T]) BeginTx(ctx context.Context) (*sqlx.Tx, error) {
+	return r.db.BeginTxx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelReadCommitted,
+	})
+}
+
+func (r *GenericRepository[T]) DB() *sqlx.DB {
+	return r.db
+}
+
+func (r *GenericRepository[T]) convertPgError(ctx context.Context, entity, id string, err error) error {
 	var pgErr *pq.Error
 	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
 		return model.NewAlreadyExistsError(entity, id, err)

@@ -29,7 +29,7 @@ func (s *UserService) Register(ctx context.Context, login, password string) (str
 		Password: hash,
 	}
 
-	err = s.repo.CreateUser(ctx, *user)
+	err = s.repo.Create(ctx, *user)
 	if err != nil {
 		return "", err
 	}
@@ -38,7 +38,7 @@ func (s *UserService) Register(ctx context.Context, login, password string) (str
 }
 
 func (s *UserService) Login(ctx context.Context, login, password string) (string, error) {
-	dbUser, err := s.repo.GetUserByLogin(ctx, login)
+	dbUser, err := s.repo.GetByLogin(ctx, login)
 	if err != nil {
 		return "", err
 	}

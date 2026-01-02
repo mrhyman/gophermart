@@ -25,7 +25,7 @@ func TestUserService_Register(t *testing.T) {
 		password := "password123"
 
 		mockRepo.EXPECT().
-			CreateUser(gomock.Any(), gomock.Any()).
+			Create(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(ctx context.Context, user model.User) error {
 				// Проверяем, что пароль был захеширован
 				assert.NotEqual(t, password, user.Password)
@@ -57,7 +57,7 @@ func TestUserService_Register(t *testing.T) {
 		password := "password123"
 
 		mockRepo.EXPECT().
-			CreateUser(gomock.Any(), gomock.Any()).
+			Create(gomock.Any(), gomock.Any()).
 			Return(model.NewAlreadyExistsError("user", login, nil)).
 			Times(1)
 
@@ -80,7 +80,7 @@ func TestUserService_Register(t *testing.T) {
 		password := "password123"
 
 		mockRepo.EXPECT().
-			CreateUser(gomock.Any(), gomock.Any()).
+			Create(gomock.Any(), gomock.Any()).
 			Return(assert.AnError).
 			Times(1)
 
@@ -101,7 +101,7 @@ func TestUserService_Register(t *testing.T) {
 		var capturedIDs []uuid.UUID
 
 		mockRepo.EXPECT().
-			CreateUser(gomock.Any(), gomock.Any()).
+			Create(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(ctx context.Context, user model.User) error {
 				capturedIDs = append(capturedIDs, user.ID)
 				return nil
@@ -141,7 +141,7 @@ func TestUserService_Login(t *testing.T) {
 		}
 
 		mockRepo.EXPECT().
-			GetUserByLogin(gomock.Any(), login).
+			GetByLogin(gomock.Any(), login).
 			Return(user, nil).
 			Times(1)
 
@@ -162,7 +162,7 @@ func TestUserService_Login(t *testing.T) {
 		password := "password123"
 
 		mockRepo.EXPECT().
-			GetUserByLogin(gomock.Any(), login).
+			GetByLogin(gomock.Any(), login).
 			Return(nil, model.ErrNotFound).
 			Times(1)
 
@@ -194,7 +194,7 @@ func TestUserService_Login(t *testing.T) {
 		}
 
 		mockRepo.EXPECT().
-			GetUserByLogin(gomock.Any(), login).
+			GetByLogin(gomock.Any(), login).
 			Return(user, nil).
 			Times(1)
 
@@ -215,7 +215,7 @@ func TestUserService_Login(t *testing.T) {
 		password := "password123"
 
 		mockRepo.EXPECT().
-			GetUserByLogin(gomock.Any(), login).
+			GetByLogin(gomock.Any(), login).
 			Return(nil, assert.AnError).
 			Times(1)
 
@@ -243,7 +243,7 @@ func TestUserService_Login(t *testing.T) {
 		}
 
 		mockRepo.EXPECT().
-			GetUserByLogin(gomock.Any(), login).
+			GetByLogin(gomock.Any(), login).
 			Return(user, nil).
 			Times(1)
 

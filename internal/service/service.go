@@ -8,10 +8,10 @@ type Service struct {
 	Balance *BalanceService
 }
 
-func New(repo *repository.Repository) *Service {
+func New(repos *repository.Repos) *Service {
 	return &Service{
-		User:    NewUserService(repo),
-		Order:   NewOrderService(repo),
-		Balance: NewBalanceService(repo),
+		User:    NewUserService(repos.User),
+		Order:   NewOrderService(repos.Order),
+		Balance: NewBalanceService(repos.Balance),
 	}
 }

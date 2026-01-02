@@ -15,17 +15,28 @@ import (
 //go:generate mockgen -source=order.go -destination=mocks/mock_order_repository.go -package=mocks
 
 type OrderRepository interface {
-	CreateOrder(ctx context.Context, userID uuid.UUID, number string) (*model.Order, error)
-	GetOrderByNumber(ctx context.Context, number string) (*model.Order, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Order, error)
+	Create(ctx context.Context, userID uuid.UUID, number string) (*model.Order, error)
+	GetByNumber(ctx context.Context, number string) (*model.Order, error)
 	GetUserOrders(ctx context.Context, userID uuid.UUID) ([]*model.Order, error)
-	CountOrdersByStatus(ctx context.Context, status model.OrderStatus) (int, error)
-	GetOrdersForProcessing(ctx context.Context, tx *sqlx.Tx, limit int) ([]*model.Order, error)
-	UpdateOrderStatus(ctx context.Context, orderID uuid.UUID, status model.OrderStatus, accrual int) error
-	UpdateOrderStatusTx(ctx context.Context, tx *sqlx.Tx, orderID uuid.UUID, status model.OrderStatus, accrual int) error
+	CountByStatus(ctx context.Context, status model.OrderStatus) (int, error)
+	GetForProcessing(ctx context.Context, tx *sqlx.Tx, limit int) ([]*model.Order, error)
+	UpdateStatus(ctx context.Context, orderID uuid.UUID, status model.OrderStatus, accrual int) error
+	UpdateStatusTx(ctx context.Context, tx *sqlx.Tx, orderID uuid.UUID, status model.OrderStatus, accrual int) error
 	BeginTx(ctx context.Context) (*sqlx.Tx, error)
 }
 
-func (r *Repository) CreateOrder(ctx context.Context, userID uuid.UUID, number string) (*model.Order, error) {
+type OrderRepo struct {
+	*GenericRepository[model.Order]
+}
+
+func NewOrderRepository(db *sqlx.DB) *OrderRepo {
+	return &OrderRepo{
+		GenericRepository: NewGenericRepository[model.Order](db),
+	}
+}
+
+func (r *OrderRepo) Create(ctx context.Context, userID uuid.UUID, number string) (*model.Order, error) {
 	order, err := model.NewOrder(uuid.New(), userID, number, model.OrderStatusNew, 0, time.Now())
 
 	if err != nil {
@@ -54,7 +65,7 @@ func (r *Repository) CreateOrder(ctx context.Context, userID uuid.UUID, number s
 	return order, nil
 }
 
-func (r *Repository) GetOrderByNumber(ctx context.Context, number string) (*model.Order, error) {
+func (r *OrderRepo) GetByNumber(ctx context.Context, number string) (*model.Order, error) {
 	query := `
 		SELECT id, user_id, number, status, created_at 
 		FROM orders 
@@ -73,7 +84,7 @@ func (r *Repository) GetOrderByNumber(ctx context.Context, number string) (*mode
 	return &order, nil
 }
 
-func (r *Repository) GetUserOrders(ctx context.Context, userID uuid.UUID) ([]*model.Order, error) {
+func (r *OrderRepo) GetUserOrders(ctx context.Context, userID uuid.UUID) ([]*model.Order, error) {
 	query := `
 		SELECT id, user_id, number, status, accrual, created_at 
 		FROM orders 
@@ -90,7 +101,7 @@ func (r *Repository) GetUserOrders(ctx context.Context, userID uuid.UUID) ([]*mo
 	return orders, nil
 }
 
-func (r *Repository) CountOrdersByStatus(ctx context.Context, status model.OrderStatus) (int, error) {
+func (r *OrderRepo) CountByStatus(ctx context.Context, status model.OrderStatus) (int, error) {
 	query := `SELECT COUNT(*) FROM orders WHERE status = $1`
 
 	var count int
@@ -98,7 +109,7 @@ func (r *Repository) CountOrdersByStatus(ctx context.Context, status model.Order
 	return count, err
 }
 
-func (r *Repository) GetOrdersForProcessing(
+func (r *OrderRepo) GetForProcessing(
 	ctx context.Context,
 	tx *sqlx.Tx,
 	limit int,
@@ -118,13 +129,13 @@ func (r *Repository) GetOrdersForProcessing(
 	return orders, err
 }
 
-func (r *Repository) BeginTx(ctx context.Context) (*sqlx.Tx, error) {
+func (r *OrderRepo) BeginTx(ctx context.Context) (*sqlx.Tx, error) {
 	return r.db.BeginTxx(ctx, &sql.TxOptions{
 		Isolation: sql.LevelReadCommitted,
 	})
 }
 
-func (r *Repository) UpdateOrderStatusTx(
+func (r *OrderRepo) UpdateStatusTx(
 	ctx context.Context,
 	tx *sqlx.Tx,
 	orderID uuid.UUID,
@@ -152,7 +163,7 @@ func (r *Repository) UpdateOrderStatusTx(
 	return nil
 }
 
-func (r *Repository) UpdateOrderStatus(
+func (r *OrderRepo) UpdateStatus(
 	ctx context.Context,
 	orderID uuid.UUID,
 	status model.OrderStatus,

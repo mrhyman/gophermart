@@ -27,17 +27,17 @@ func main() {
 
 	cfg := config.Load(ctx)
 
-	repo := initRepo(ctx, cfg)
-	defer repo.Close()
+	repos := initRepos(ctx, cfg)
+	defer repos.Close()
 
-	svc := service.New(repo)
+	svc := service.New(repos)
 	h := handler.New(*svc, cfg.HashKey)
 	s := server.New(cfg, *h)
 
 	accrualClient := client.NewAccrualClient(cfg.AccrualAddress)
 	w := worker.NewAccrualWorker(
-		repo,
-		repo,
+		repos.Order,
+		repos.User,
 		accrualClient,
 		config.WorkerPollInterval,
 		config.WorkerBatchSize,
@@ -74,20 +74,19 @@ func main() {
 	log.Info("Application stopped")
 }
 
-func initRepo(ctx context.Context, cfg config.AppConfig) *repository.Repository {
+func initRepos(ctx context.Context, cfg config.AppConfig) *repository.Repos {
 	log := logger.FromContext(ctx)
 
-	repo, err := repository.NewRepository(cfg.DBURI)
-
+	repos, err := repository.NewRepos(cfg.DBURI)
 	if err != nil {
-		log.With("err", err.Error()).Fatal()
+		log.With("err", err.Error()).Fatal("failed to create repos")
 	}
 
-	err = repo.MigrateUp("migrations", cfg.DBURI)
+	err = repos.MigrateUp("migrations", cfg.DBURI)
 	if err != nil {
-		log.With("err", err.Error()).Fatal()
+		log.With("err", err.Error()).Fatal("failed to apply migrations")
 	}
 	log.Info("DB connection set. Migrations applied successfully")
 
-	return repo
+	return repos
 }

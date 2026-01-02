@@ -31,3 +31,5 @@ func NewWithdrawal(
 
 	return w, nil
 }
+
+func (Withdrawal) TableName() string { return "withdraws" }
