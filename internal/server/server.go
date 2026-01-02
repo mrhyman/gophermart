@@ -24,11 +24,23 @@ func New(cfg config.AppConfig, h handler.HTTPHandler) *Server {
 	}
 }
 
-func (s *Server) Start(ctx context.Context) {
+func (s *Server) Start(ctx context.Context) error {
 	logger.FromContext(ctx).Infof("listening on %s", s.Instance.Addr)
-	if err := s.Instance.ListenAndServe(); err != nil {
-		logger.FromContext(ctx).With("err", err.Error()).Fatal()
+
+	go func() {
+		<-ctx.Done()
+		s.Instance.Shutdown(context.Background())
+	}()
+
+	if err := s.Instance.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return err
 	}
+
+	return nil
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.Instance.Shutdown(ctx)
 }
 
 func SetupMux(h *handler.HTTPHandler, cfg config.AppConfig) http.Handler {

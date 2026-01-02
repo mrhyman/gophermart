@@ -6,6 +6,7 @@ import (
 )
 
 var (
+	ErrServerCrash                = errors.New("server error")
 	ErrLoggerSetup                = errors.New("logger setup error")
 	ErrCookieDecoding             = errors.New("can't decode cookie")
 	ErrCookieEncoding             = errors.New("can't encode cookie")

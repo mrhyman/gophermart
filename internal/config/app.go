@@ -18,6 +18,7 @@ const (
 	WorkerBatchSize       = 10
 	WorkerPoolSize        = 3
 	AccuralRequestTimeout = 10 * time.Second
+	ShutdownTimeout       = 10 * time.Second
 )
 
 type AppConfig struct {

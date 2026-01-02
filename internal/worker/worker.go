@@ -10,6 +10,7 @@ import (
 	"github.com/mrhyman/gophermart/internal/logger"
 	"github.com/mrhyman/gophermart/internal/model"
 	"github.com/mrhyman/gophermart/internal/repository"
+	"golang.org/x/sync/errgroup"
 )
 
 type AccrualWorker struct {
@@ -39,10 +40,16 @@ func NewAccrualWorker(
 	}
 }
 
-func (w *AccrualWorker) Start(ctx context.Context) {
+func (w *AccrualWorker) Start(ctx context.Context) error {
+	g, ctx := errgroup.WithContext(ctx)
+
 	for i := 0; i < w.poolSize; i++ {
-		go w.worker(ctx, i, w.pollInterval, w.batchSize)
+		g.Go(func() error {
+			return w.run(ctx, i)
+		})
 	}
+
+	return g.Wait()
 }
 
 func (w *AccrualWorker) worker(ctx context.Context, workerID int, pollInterval time.Duration, batchSize int) {
@@ -58,6 +65,27 @@ func (w *AccrualWorker) worker(ctx context.Context, workerID int, pollInterval t
 			return
 		case <-ticker.C:
 			if err := w.processBatch(ctx, batchSize); err != nil {
+				log.With("err", err.Error()).Error()
+			}
+		}
+	}
+}
+
+func (w *AccrualWorker) run(ctx context.Context, workerID int) error {
+	log := logger.FromContext(ctx).With("worker_id", workerID)
+
+	ticker := time.NewTicker(w.pollInterval)
+	defer ticker.Stop()
+
+	log.Info("accrual worker started")
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("accrual worker stopped")
+			return nil
+		case <-ticker.C:
+			if err := w.processBatch(ctx, w.batchSize); err != nil {
 				log.With("err", err.Error()).Error()
 			}
 		}
@@ -112,10 +140,6 @@ func (w *AccrualWorker) processOrder(ctx context.Context, tx *sqlx.Tx, order *mo
 	if err != nil {
 		return err
 	}
-
-	// if newStatus == order.Status && accrualResp.Accrual == nil {
-	// 	return nil
-	// }
 
 	var accrual int
 	if accrualResp.Accrual != nil {
