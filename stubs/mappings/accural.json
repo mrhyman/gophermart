@@ -1,0 +1,15 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/api/orders/([0-9]+)"
+  },
+
+  "response": {
+    "status": 200,
+    "body": "{\"order\":\"{{request.pathSegments.[2]}}\",\"status\":\"PROCESSED\",\"accrual\":500}",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "transformers": ["response-template"]
+  }
+}
